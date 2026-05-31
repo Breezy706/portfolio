@@ -1,5 +1,5 @@
-import os, smtplib
-from email.mime.text import MIMEText
+import os
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
@@ -8,32 +8,65 @@ app = FastAPI(title="Yahaya Portfolio API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
-    allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    allow_origins=[
+        "https://portfolio-blue-iota-27.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+MAIL_TO = os.environ.get("MAIL_TO", "ramadhanyahya16@gmail.com")
+
 
 class ContactMessage(BaseModel):
     name: str
     email: EmailStr
     message: str
 
-@app.get("/")
-def root(): return {"status": "ok"}
 
-@app.post("/api/contact")
+@app.get("/")
+def root():
+    return {"status": "backend running"}
+
+
+@app.post("/contact")
 def contact(msg: ContactMessage):
-    host = os.getenv("SMTP_HOST"); user = os.getenv("SMTP_USER"); pwd = os.getenv("SMTP_PASS")
-    to = os.getenv("CONTACT_TO", "ramadhanyahya16@gmail.com")
-    if not (host and user and pwd):
-        # No SMTP configured — just log it
+    if not RESEND_API_KEY:
+        # No Resend API key — just log it
         print(f"[CONTACT] {msg.name} <{msg.email}>: {msg.message}")
-        return {"ok": True, "stored": False}
+        return {"success": True, "message": "Imehifadhiwa (bila kutuma email)"}
+
     try:
-        body = f"From: {msg.name} <{msg.email}>\n\n{msg.message}"
-        m = MIMEText(body); m["Subject"] = f"Portfolio contact — {msg.name}"
-        m["From"] = user; m["To"] = to
-        with smtplib.SMTP_SSL(host, int(os.getenv("SMTP_PORT", "465"))) as s:
-            s.login(user, pwd); s.sendmail(user, [to], m.as_string())
-        return {"ok": True, "stored": True}
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "onboarding@resend.dev",
+                "to": MAIL_TO,
+                "subject": f"Portfolio Contact: {msg.name}",
+                "text": (
+                    f"Jina: {msg.name}\n"
+                    f"Barua pepe: {msg.email}\n\n"
+                    f"Ujumbe:\n{msg.message}"
+                ),
+            },
+        )
+
+        if response.status_code == 200:
+            return {"success": True, "message": "Email imetumwa!"}
+        else:
+            print(f"Resend error: {response.text}")
+            raise HTTPException(status_code=500, detail="Imeshindwa kutuma")
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(500, str(e))
+        print(f"Kosa: {e}")
+        raise HTTPException(status_code=500, detail="Imeshindwa kutuma email")
