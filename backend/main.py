@@ -9,7 +9,7 @@ app = FastAPI(title="Yahaya Portfolio API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://portfolio-breee1.vercel.app/",
+        "https://portfolio-breee1.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000",
     ],
