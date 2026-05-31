@@ -62,8 +62,9 @@ def contact(msg: ContactMessage):
         if response.status_code == 200:
             return {"success": True, "message": "Email imetumwa!"}
         else:
-            print(f"Resend error: {response.text}")
-            raise HTTPException(status_code=500, detail="Imeshindwa kutuma")
+            print(f"Resend error body: {response.text}")  # <-- hapa ndipo kosa liko
+            raise HTTPException(status_code=500, detail=response.text)  # rudisha kosa halis
+ 
 
     except HTTPException:
         raise
