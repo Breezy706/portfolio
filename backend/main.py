@@ -49,7 +49,7 @@ def contact(msg: ContactMessage):
             },
             json={
                 "from": "onboarding@resend.dev",
-                "to": MAIL_TO,
+                "to": [MAIL_TO],
                 "subject": f"Portfolio Contact: {msg.name}",
                 "text": (
                     f"Jina: {msg.name}\n"
@@ -59,7 +59,7 @@ def contact(msg: ContactMessage):
             },
         )
 
-        if response.status_code == 200:
+        if response.status_code in (200, 201):
             return {"success": True, "message": "Email imetumwa!"}
         else:
             print(f"Resend error body: {response.text}")  # <-- hapa ndipo kosa liko
